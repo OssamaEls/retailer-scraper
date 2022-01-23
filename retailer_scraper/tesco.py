@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote
+from math import ceil
 
 from headers import headers
 
@@ -30,7 +31,13 @@ class TescoScraper:
         )[
             1
         ].text.split()[0]
-        number_of_pages = number_of_items // 50
+        number_of_pages = ceil(int(number_of_items)/50)
+        # for page in number_of_pages:
+        #     item = soup.find(
+        #         name='li',
+        #         attrs={'class': 'product-list--list-item'}
+        #     )
+
         return soup
 
     @property
@@ -39,7 +46,10 @@ class TescoScraper:
 
 
 
-tesco_scraper = TescoScraper('free range eggs')
+tesco_scraper = TescoScraper('eggs')
 soup = tesco_scraper.run_query()
 # result = soup.find(name='p', attrs={'class': 'results-title'})
-result = soup.find(name='div', attrs={'class': 'pagination__items-displayed'})
+result = soup.find_all(
+                name='li',
+                attrs={'class': 'product-list--list-item'}
+            )
