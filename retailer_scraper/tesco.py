@@ -2,12 +2,19 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 from math import ceil
-from typing import List
+from typing import List, Dict
 
 from headers import headers
 
 
+def parse_html(url: str) -> BeautifulSoup:
+    output = requests.get(url, headers=headers, timeout=5)
+    page = output.text
+    return BeautifulSoup(page, 'html.parser')
+
+
 class TescoScraper:
+    website = 'https://www.tesco.com'
     base_url = 'https://www.tesco.com/groceries/en-GB/search?query='
     num_items_per_page = 48
 
@@ -51,6 +58,7 @@ class TescoScraper:
 
     def individual_page_links(self) -> List[str]:
         return [
+            self.website +
             item.find(
                 name='a',
                 href=True
@@ -59,14 +67,42 @@ class TescoScraper:
         ]
 
     def parse_page(self, page_number: int) -> BeautifulSoup:
-        url = self.get_url(page_number)
-        output = requests.get(url, headers=headers, timeout=5)
-        page = output.text
-        return BeautifulSoup(page, 'html.parser')
+        return parse_html(
+            self.get_url(page_number)
+        )
+
+    def items_details(self) -> List[Dict]:
+        items_details_ = []
+        individual_page_links = self.individual_page_links()
+        for i, detail_page in enumerate(map(parse_html, individual_page_links)):
+            print(f'scraping data from {individual_page_links[i]}')
+            try:
+                name = detail_page.find(
+                    name='h1',
+                    attrs={'class': 'product-details-tile__title'}
+                ).text
+                price = detail_page.find(
+                    name='div',
+                    attrs={'class': 'price-per-sellable-unit'}
+                ).text
+                price_per_quantity = detail_page.find(
+                    name='div',
+                    attrs={'class': 'price-per-quantity-weight'}
+                ).text
+                items_details_.append({
+                    'name': name,
+                    'price': price,
+                    'price_per_quantity': price_per_quantity
+                })
+            except AttributeError:
+                self._items.pop(i)
+
+        return items_details_
 
 
-tesco_scraper = TescoScraper('eggs')
+tesco_scraper = TescoScraper('free range eggs')
 tesco_scraper.run_query()
 items = tesco_scraper.items
-links = tesco_scraper.individual_page_links()
+links = tesco_scraper.individual_page_links
+items_details = tesco_scraper.items_details()
 
