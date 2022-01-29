@@ -1,8 +1,14 @@
+import json
+from math import ceil
+from typing import List, Dict, Optional
+from uuid import uuid4
+import os
+from pathlib import Path
+
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote
-from math import ceil
-from typing import List, Dict
+from urllib.request import urlretrieve
 
 from headers import headers
 
@@ -13,14 +19,26 @@ def parse_html(url: str) -> BeautifulSoup:
     return BeautifulSoup(page, 'html.parser')
 
 
+def get_text(
+        bs: BeautifulSoup,
+        *,
+        name: str,
+        attrs: Optional[Dict]
+) -> str:
+    soup = bs.find(name=name, attrs=attrs)
+    return soup.text if soup is not None else "Info not available"
+
+
 class TescoScraper:
     website = 'https://www.tesco.com'
     base_url = 'https://www.tesco.com/groceries/en-GB/search?query='
     num_items_per_page = 48
 
     def __init__(self, query: str):
+        # TODO: create Item class
         self.query = query
         self._items = []
+        self._items_details = []
 
     def get_url(self, page_number: int):
         return f'{self.base_url}{quote(self.query)}&page={page_number}&count={self.num_items_per_page}'
@@ -54,9 +72,9 @@ class TescoScraper:
 
     @property
     def items(self):
-        return self._items
+        return [item for item in self._items if item is not None]
 
-    def individual_page_links(self) -> List[str]:
+    def _individual_page_links(self) -> List[str]:
         return [
             self.website +
             item.find(
@@ -71,38 +89,90 @@ class TescoScraper:
             self.get_url(page_number)
         )
 
-    def items_details(self) -> List[Dict]:
-        items_details_ = []
-        individual_page_links = self.individual_page_links()
+    @property
+    def items_details(self) -> Optional[List[Dict]]:
+        if self._items_details:
+            return self._items_details
+        # TODO: consider adding nutrition
+        individual_page_links = self._individual_page_links()
         for i, detail_page in enumerate(map(parse_html, individual_page_links)):
             print(f'scraping data from {individual_page_links[i]}')
             try:
+                product_id = individual_page_links[i].split('/')[-1]
+                guid = uuid4()
+
                 name = detail_page.find(
                     name='h1',
                     attrs={'class': 'product-details-tile__title'}
                 ).text
+
                 price = detail_page.find(
                     name='div',
                     attrs={'class': 'price-per-sellable-unit'}
                 ).text
-                price_per_quantity = detail_page.find(
+
+                price_per_quantity = get_text(
+                    detail_page,
                     name='div',
                     attrs={'class': 'price-per-quantity-weight'}
-                ).text
-                items_details_.append({
+                )
+
+                image_link = detail_page.find(
+                    name='div',
+                    attrs={'class': 'product-image__container'}
+                ).findChild(
+                    name='img'
+                )['src']
+
+                # nutrition = get_text(
+                #     detail_page,
+                #     name='div',
+                #     attrs={'class': 'gda'}
+                # )
+
+                self._items_details.append({
+                    'id': str(product_id),
+                    'GUID': str(guid),
                     'name': name,
                     'price': price,
-                    'price_per_quantity': price_per_quantity
+                    'price_per_quantity': price_per_quantity,
+                    'image_link': image_link,
+                    # 'nutrition': nutrition
                 })
             except AttributeError:
-                self._items.pop(i)
+                self._items[i] = None
 
-        return items_details_
+        return self._items_details
+
+    def save_results_to_files(self):
+        directory = Path(__file__).parent.parent / 'raw_data'
+        os.makedirs(directory, exist_ok=True)
+
+        for item_details in self.items_details:
+            item_directory = directory / item_details['id']
+            os.makedirs(item_directory, exist_ok=True)
+            with open(item_directory / 'data.json', 'w', encoding='utf8') as f:
+                json.dump(item_details, f, indent=4, ensure_ascii=False)
+            urlretrieve(item_details['image_link'], item_directory / 'image.jpg')
+
+
+
+
+
+# def get_nutrition(
+#         bs: BeautifulSoup,
+#         *,
+#         name: str,
+#         attrs: Optional[Dict]
+# ):
+#     soup = bs.find(name=name, attrs=attrs)
+#     for child in soup.findChildren(name='div', attrs=)
 
 
 tesco_scraper = TescoScraper('free range eggs')
 tesco_scraper.run_query()
 items = tesco_scraper.items
-links = tesco_scraper.individual_page_links
-items_details = tesco_scraper.items_details()
+# links = tesco_scraper._individual_page_links()
+items_details = tesco_scraper.items_details
+tesco_scraper.save_results_to_files()
 
