@@ -10,9 +10,12 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote
 from urllib.request import urlretrieve
 
-from headers import headers
-from item import Item
+from retailer_scraper.headers import headers
+from retailer_scraper.item import Item
 
+
+# TODO: use logging
+# TODO: use multi-threading
 
 def parse_html(url: str) -> BeautifulSoup:
     """
@@ -242,7 +245,7 @@ class TescoScraper:
             urlretrieve(item_details['image_link'], item_directory / 'image.jpg')
 
 
-tesco_scraper = TescoScraper('free range eggs')
+tesco_scraper = TescoScraper('snickers')
 items = tesco_scraper.items
 items_details = [item.details for item in items]
 tesco_scraper.save_results_to_files()

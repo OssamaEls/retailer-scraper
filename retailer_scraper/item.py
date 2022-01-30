@@ -9,8 +9,8 @@ class Item:
         Wrapper for a product.
         Parameters
         ----------
-        bs:
-            BeautifulSoup object wrapping the product html content in the search results
+        bs: BeautifulSoup
+            Object wrapping the product html content in the search results
         """
         self.soup = bs
         self.name = self.get_name()
