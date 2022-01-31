@@ -5,47 +5,59 @@ from retailer_scraper.tesco import TescoScraper
 
 
 @pytest.fixture
-def fool_query():
-    return 'khhkge7943k'
+def fool_query_scraper():
+    return TescoScraper('khhkge7943k')
 
 
 @pytest.fixture
-def typo_query():
-    return 'bonana'
+def typo_query_scraper():
+    return TescoScraper('snikers')
 
 
 @pytest.fixture
-def normal_query():
-    return 'banana'
+def normal_query_scraper():
+    return TescoScraper('snickers')
 
 
 @pytest.fixture
-def multiple_words_query():
-    return 'free_range_eggs'
+def multiple_words_query_scraper():
+    return TescoScraper('free_range_eggs')
 
 
-def test_no_result(fool_query):
-    tesco_scraper = TescoScraper(fool_query)
-    assert len(tesco_scraper.items) == 0
+def test_no_result(fool_query_scraper):
+    assert len(fool_query_scraper.items) == 0
 
 
-def test_result_without_exact_match(typo_query):
-    tesco_scraper = TescoScraper(typo_query)
-    assert tesco_scraper.found_exact_match is False
-    assert len(tesco_scraper.items) > 0
+def test_result_without_exact_match(typo_query_scraper):
+    assert len(typo_query_scraper.items) > 0
 
 
-def test_result_with_exact_match(normal_query):
-    tesco_scraper = TescoScraper(normal_query)
-    assert tesco_scraper.found_exact_match is True
-    assert len(tesco_scraper.items) > 0
+def test_result_with_exact_match(normal_query_scraper):
+    assert len(normal_query_scraper.items) > 0
 
 
-def test_query_with_multiple_words(multiple_words_query):
-    tesco_scraper = TescoScraper(multiple_words_query)
-    assert tesco_scraper.found_exact_match is True
-    assert len(tesco_scraper.items) > 0
+def test_compare_queries_results(typo_query_scraper, normal_query_scraper):
+    details_left = [
+        {
+            k: v
+            for k, v
+            in item.details.items()
+            if k != 'GUID'
+        }
+        for item
+        in typo_query_scraper.items
+    ]
+    details_right = [
+        {
+            k: v
+            for k, v
+            in item.details.items()
+            if k != 'GUID'
+        }
+        for item
+        in normal_query_scraper.items
+    ]
 
-
-
-
+    assert len(details_left) == len(details_right)
+    for item_details in details_left:
+        assert item_details in details_right
