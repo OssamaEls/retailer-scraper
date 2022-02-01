@@ -242,7 +242,7 @@ class TescoScraper:
             os.makedirs(item_directory, exist_ok=True)
             with open(item_directory / 'data.json', 'w', encoding='utf8') as f:
                 json.dump(item_details, f, indent=4, ensure_ascii=False)
-            urlretrieve(item_details['image_link'], item_directory / 'image.jpg')
+            urlretrieve(item_details['image_link'], item_directory / f"{item_details['id']}.jpg")
 
 
 tesco_scraper = TescoScraper('snickers')
