@@ -1,7 +1,7 @@
 import json
 from math import ceil
 from typing import List, Dict, Optional
-from uuid import uuid4
+# from uuid import uuid4
 import os
 from pathlib import Path
 
@@ -181,7 +181,7 @@ class TescoScraper:
 
             try:
                 product_id = individual_page_links[i].split('/')[-1]
-                guid = uuid4()
+                # guid = uuid4()
 
                 name = detail_page.find(
                     name='h1',
@@ -214,7 +214,7 @@ class TescoScraper:
 
                 self._items[i].details = {
                     'id': str(product_id),
-                    'GUID': str(guid),
+                    # 'GUID': str(guid),
                     'name': name,
                     'price': price,
                     'price_per_quantity': price_per_quantity,
