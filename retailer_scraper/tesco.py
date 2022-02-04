@@ -1,67 +1,24 @@
-import json
+
 from math import ceil
-from typing import List, Dict, Optional
+from typing import List
 # from uuid import uuid4
 import os
 from pathlib import Path
 import re
 
-import requests
+
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 from urllib.request import urlretrieve
 
-from retailer_scraper.headers import headers
+
 from retailer_scraper.item import Item
-from retailer_scraper.util import make_session
+from retailer_scraper.util import get_text, parse_html, make_session, save_files
 from retailer_scraper.db_model import Product
 
 
 # TODO: use logging
 # TODO: use multi-threading
-
-def parse_html(url: str) -> BeautifulSoup:
-    """
-    Routine to get a BeautifulSoup object from an url.
-    Parameters
-    ----------
-    url
-    Returns
-    -------
-        BeautifulSoup object wrapping the html content of the web page
-    """
-    output = requests.get(url, headers=headers, timeout=5)
-    page = output.text
-    return BeautifulSoup(page, 'html.parser')
-
-
-def get_text(
-        bs: BeautifulSoup,
-        *,
-        name: str,
-        attrs: Optional[Dict]
-) -> str:
-    """
-    Parameters
-    ----------
-    bs : BeautifulSoup
-        Object wrapping some html content
-    name
-    attrs
-        Parameters to bs
-    Returns
-    -------
-    str
-        Text wrapped by the soup request or a default string if soup is None
-    """
-    soup = bs.find(name=name, attrs=attrs)
-    return soup.text if soup is not None else "Info not available"
-
-
-def save_files(details: Dict, item_directory: Path):
-    os.makedirs(item_directory, exist_ok=True)
-    with open(item_directory / 'data.json', 'w', encoding='utf8') as f:
-        json.dump(details, f, indent=4, ensure_ascii=False)
 
 
 class TescoScraper:
@@ -149,7 +106,7 @@ class TescoScraper:
             ]
 
     @property
-    def items(self):
+    def items(self) -> List[Item]:
         return [item for item in self._items if item is not None]
 
     def _individual_page_links(self) -> List[str]:

@@ -1,23 +1,9 @@
-from sqlalchemy import and_, Column, exists, Float, Integer, String, ForeignKey, MetaData, Table, DateTime
+from sqlalchemy import Column, Float, Integer, String, DateTime
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, Session
+from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from sqlalchemy.exc import NoResultFound
-
-metadata_obj = MetaData()
-
-# product = Table(
-#     'product', metadata_obj,
-#     Column('id', Integer, primary_key=True),
-#     Column('name', String, nullable=False),
-#     Column('price', Float, nullable=False),
-#     Column('price_per_quantity', Float, nullable=False),
-#     Column('base_quantity', String),
-#     Column('image_link', String),
-#     Column('created_timestamp', DATETIME)
-# )
-
 
 
 Base = declarative_base()
@@ -46,6 +32,4 @@ class Product(Base):
         except NoResultFound:
             return None
 
-    # def has_entry_with_same_price(self, product: 'Product', session: Session) -> bool:
-    #     return self.price == product.price
 
