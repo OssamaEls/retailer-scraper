@@ -2,4 +2,3 @@ bs4
 psycopg2
 sqlalchemy
 boto3
-pandas

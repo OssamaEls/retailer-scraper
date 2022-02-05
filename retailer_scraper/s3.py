@@ -1,11 +1,17 @@
 import os
 from pathlib import Path
-import shutil
-
-import boto3
 
 
 def upload_directory(path: Path, s3_client, bucket_name):
+    """
+    Upload whole directory to an s3 bucket
+    Parameters
+    ----------
+    path : Path
+        Path of the directory to upload to s3
+    s3_client
+    bucket_name
+    """
     for root, dirs, files in os.walk(path):
         for file in files:
             file_path = str(Path(root) / file)
@@ -19,9 +25,3 @@ def upload_directory(path: Path, s3_client, bucket_name):
                 relative_path
             )
 
-
-s3_client = boto3.client('s3')
-path = Path(__file__).parent.parent / 'raw_data'
-upload_directory(path, s3_client, 'retailer-scraper')
-
-shutil.rmtree(path)

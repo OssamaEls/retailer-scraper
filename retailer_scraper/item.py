@@ -13,14 +13,14 @@ class Item:
             Object wrapping the product html content in the search results
         """
         self.soup = bs
-        self.name = self.get_name()
+        # self.name = self.get_name()
         self._details = None
 
-    def get_name(self) -> str:
-        return self.soup.find(
-            name='div',
-            attrs={'class': 'product-details--wrapper'}
-        ).find(name='h3').text
+    # def get_name(self) -> str:
+    #     return self.soup.find(
+    #         name='div',
+    #         attrs={'class': 'product-details--wrapper'}
+    #     ).find(name='h3').text
 
     @property
     def href(self):
@@ -32,12 +32,12 @@ class Item:
                 href=True
             )['href']
 
-    @property
-    def id(self):
-        """
-        Unique ID of the product
-        """
-        return self.href.split('/')[-1]
+    # @property
+    # def id(self):
+    #     """
+    #     Unique ID of the product
+    #     """
+    #     return self.href.split('/')[-1]
 
     @property
     def details(self):

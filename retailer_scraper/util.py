@@ -8,7 +8,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import NullPool
 
 from retailer_scraper.db_config import config
@@ -18,7 +18,7 @@ from retailer_scraper.headers import headers
 
 def parse_html(url: str) -> BeautifulSoup:
     """
-    Routine to get a BeautifulSoup object from an url.
+    Get a BeautifulSoup object from an url.
     Parameters
     ----------
     url
@@ -54,13 +54,19 @@ def get_text(
     return soup.text if soup is not None else "Info not available"
 
 
-def save_files(details: Dict, item_directory: Path):
+def to_json(details: Dict, item_directory: Path):
     os.makedirs(item_directory, exist_ok=True)
     with open(item_directory / 'data.json', 'w', encoding='utf8') as f:
         json.dump(details, f, indent=4, ensure_ascii=False)
 
 
-def make_session():
+def make_session() -> Session:
+    """
+    Create an SQLAlchemy session to interact with the database
+    Returns
+    -------
+    An SQLAlchemy Session
+    """
     db_name = config['db_name']
     username = config['username']
     password = config['password']

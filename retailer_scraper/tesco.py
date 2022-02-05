@@ -13,7 +13,7 @@ from urllib.request import urlretrieve
 
 
 from retailer_scraper.item import Item
-from retailer_scraper.util import get_text, parse_html, make_session, save_files
+from retailer_scraper.util import get_text, parse_html, make_session, to_json
 from retailer_scraper.db_model import Product
 
 
@@ -133,6 +133,7 @@ class TescoScraper:
     def get_items_details(self):
         """
         Extract data from the details page:
+            - category
             - name of the product
             - price
             - price per quantity
@@ -210,23 +211,22 @@ class TescoScraper:
             except AttributeError:
                 self._items[i] = None
 
-    def save_to_files_and_db(self):
+    def save_to_files_and_db(self, output_directory: Path):
         """
         Save items details in JSON and images.
-        Output directory: raw_data/<query>/<item_id>
+        Output directory: raw_data/<category>/<item_id>
         """
-        # TODO: symlinks for existing items
         if not self._items:
             print('No result found.')
             return
-        directory = Path(__file__).parent.parent / 'raw_data'
-        os.makedirs(directory, exist_ok=True)
+
+        os.makedirs(output_directory, exist_ok=True)
 
         for item in self.items:
             item_details = item.details
 
             product = Product(**item_details)
-            item_directory = directory / f"{item_details['category']}/{item_details['id']}"
+            item_directory = output_directory / f"{item_details['category']}/{item_details['id']}"
 
             if entry := Product.get_entry_if_exists(
                                 product,
@@ -235,11 +235,11 @@ class TescoScraper:
                 # print('found entry')
                 # print(entry, type(entry))
                 if entry.price != product.price:
-                    save_files(item_details, item_directory)
+                    to_json(item_details, item_directory)
                 else:
                     continue
             else:
-                save_files(item_details, item_directory)
+                to_json(item_details, item_directory)
                 urlretrieve(item_details['image_link'], item_directory / f"image.jpg")
             self.session.add(product)
 
@@ -247,10 +247,4 @@ class TescoScraper:
         self.session.close()
         print('end of call')
 
-
-
-tesco_scraper = TescoScraper('snickers')
-items = tesco_scraper.items
-items_details = [item.details for item in items]
-tesco_scraper.save_to_files_and_db()
 
