@@ -1,4 +1,4 @@
-
+import logging
 from math import ceil
 from typing import List
 # from uuid import uuid4
@@ -8,6 +8,7 @@ import re
 
 
 from bs4 import BeautifulSoup
+from tqdm import tqdm
 from urllib.parse import quote
 from urllib.request import urlretrieve
 
@@ -16,6 +17,10 @@ from retailer_scraper.item import Item
 from retailer_scraper.util import get_text, parse_html, make_session, to_json
 from retailer_scraper.db_model import Product
 
+
+# logger = logging.getLogger(
+#     __name__
+# )
 
 # TODO: use logging
 # TODO: use multi-threading
@@ -69,6 +74,7 @@ class TescoScraper:
         found_items = soup.find(name='div', attrs={'class': 'product-list-container'})
 
         if not found_items:
+            logging.info('No result found.')
             return
 
         if (
@@ -79,7 +85,7 @@ class TescoScraper:
                 )[:16] ==
                 (no_exact_match := 'No exact matches found')
         ):
-            print(f'Warning: {no_exact_match} for your query {self.query}.')
+            logging.warning(f"{no_exact_match} for your query '{self.query}'.")
 
         # second <strong> tag under the div tag with class 'pagination__items-displayed' has text: 'xxx items'
         num_items = soup.find(
@@ -91,9 +97,12 @@ class TescoScraper:
             1
         ].text.split()[0]
 
+
         num_pages = ceil(int(num_items)/self.num_items_per_page)
 
-        for page_number in range(1, num_pages + 1):
+        logging.info(f"Found {num_items} items for your query. Fetching {num_pages} {'pages' if num_pages>1 else 'page'}.")
+
+        for page_number in tqdm(range(1, num_pages + 1)):
             if page_number != 1:
                 soup = self.parse_page(page_number)
             self._items += [
@@ -141,13 +150,16 @@ class TescoScraper:
         """
         # TODO: consider adding nutrition
         # TODO: consider adding review stats
+
+        logging.info('Fetching data from individual pages.')
+
         individual_page_links = self._individual_page_links()
 
         float_pattern = "\d+\.\d+"
 
         for i, detail_page in enumerate(map(parse_html, individual_page_links)):
 
-            print(f'scraping data from {individual_page_links[i]}')
+            logging.info(f'Scraping data from {individual_page_links[i]}')
 
             try:
                 product_id = individual_page_links[i].split('/')[-1]
@@ -178,10 +190,12 @@ class TescoScraper:
                     attrs={'class': 'price-per-quantity-weight'}
                 )
 
-                price_per_quantity = re.findall(
-                    float_pattern,
-                    price_per_quantity_info
-                )[0]
+                price_per_quantity = float(
+                    re.findall(
+                        float_pattern,
+                        price_per_quantity_info
+                    )[0]
+                )
                 base_quantity = price_per_quantity_info.split('/')[-1]
 
                 image_link = detail_page.find(
@@ -211,6 +225,8 @@ class TescoScraper:
             except AttributeError:
                 self._items[i] = None
 
+        logging.info('Scraping finished.')
+
     def save_to_files_and_db(self, output_directory: Path):
         """
         Save items details in JSON and images.
@@ -221,6 +237,8 @@ class TescoScraper:
             return
 
         os.makedirs(output_directory, exist_ok=True)
+
+        logging.info("Saving to files and to the database (if not existing)")
 
         for item in self.items:
             item_details = item.details
@@ -245,6 +263,9 @@ class TescoScraper:
 
         self.session.commit()
         self.session.close()
-        print('end of call')
 
 
+# tesco_scraper = TescoScraper('snikers')
+# path = Path(__file__).parent.parent / 'raw_data'
+# items_details = [item.details for item in tesco_scraper.items]
+# tesco_scraper.save_to_files_and_db(path)

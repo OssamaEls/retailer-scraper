@@ -26,7 +26,7 @@ def parse_html(url: str) -> BeautifulSoup:
     -------
         BeautifulSoup object wrapping the html content of the web page
     """
-    output = requests.get(url, headers=headers, timeout=5)
+    output = requests.get(url, headers=headers, timeout=10)
     page = output.text
     return BeautifulSoup(page, 'html.parser')
 
