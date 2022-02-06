@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 
 
-
 def upload_directory(path: Path, s3_client, bucket_name):
     """
     Upload whole directory to an s3 bucket

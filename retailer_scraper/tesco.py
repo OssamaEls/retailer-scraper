@@ -6,12 +6,10 @@ import os
 from pathlib import Path
 import re
 
-
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 from urllib.parse import quote
 from urllib.request import urlretrieve
-
 
 from retailer_scraper.item import Item
 from retailer_scraper.util import get_text, parse_html, make_session, to_json
@@ -22,7 +20,6 @@ from retailer_scraper.db_model import Product
 #     __name__
 # )
 
-# TODO: use logging
 # TODO: use multi-threading
 
 
@@ -96,7 +93,6 @@ class TescoScraper:
         )[
             1
         ].text.split()[0]
-
 
         num_pages = ceil(int(num_items)/self.num_items_per_page)
 
