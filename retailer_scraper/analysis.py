@@ -19,8 +19,8 @@ def get_min_prices(items_details: List[Dict]) -> Tuple[List, List]:
         4 elements:
             - min price per unit
             - min price / 100g
-            - min price /100mL
-            - min price /each
+            - min price / 100mL
+            - min price / each
     """
     df = pd.DataFrame(items_details)
     base_url = 'https://www.tesco.com/groceries/en-GB/products/'

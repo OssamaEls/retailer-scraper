@@ -103,6 +103,7 @@ class TescoScraper:
         logging.info(f"Found {num_items} items for your query. Fetching {num_pages} {'pages' if num_pages>1 else 'page'}.")
 
         for page_number in tqdm(range(1, num_pages + 1)):
+            logging.info(f"Fetching page {page_number}...")
             if page_number != 1:
                 soup = self.parse_page(page_number)
             self._items += [
