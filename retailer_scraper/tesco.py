@@ -1,67 +1,26 @@
-import json
+import logging
 from math import ceil
-from typing import List, Dict, Optional
+from typing import List
 # from uuid import uuid4
 import os
 from pathlib import Path
 import re
 
-import requests
 from bs4 import BeautifulSoup
+from tqdm import tqdm
 from urllib.parse import quote
 from urllib.request import urlretrieve
 
-from retailer_scraper.headers import headers
 from retailer_scraper.item import Item
-from retailer_scraper.util import make_session
+from retailer_scraper.util import get_text, parse_html, make_session, to_json
 from retailer_scraper.db_model import Product
 
 
-# TODO: use logging
+# logger = logging.getLogger(
+#     __name__
+# )
+
 # TODO: use multi-threading
-
-def parse_html(url: str) -> BeautifulSoup:
-    """
-    Routine to get a BeautifulSoup object from an url.
-    Parameters
-    ----------
-    url
-    Returns
-    -------
-        BeautifulSoup object wrapping the html content of the web page
-    """
-    output = requests.get(url, headers=headers, timeout=5)
-    page = output.text
-    return BeautifulSoup(page, 'html.parser')
-
-
-def get_text(
-        bs: BeautifulSoup,
-        *,
-        name: str,
-        attrs: Optional[Dict]
-) -> str:
-    """
-    Parameters
-    ----------
-    bs : BeautifulSoup
-        Object wrapping some html content
-    name
-    attrs
-        Parameters to bs
-    Returns
-    -------
-    str
-        Text wrapped by the soup request or a default string if soup is None
-    """
-    soup = bs.find(name=name, attrs=attrs)
-    return soup.text if soup is not None else "Info not available"
-
-
-def save_files(details: Dict, item_directory: Path):
-    os.makedirs(item_directory, exist_ok=True)
-    with open(item_directory / 'data.json', 'w', encoding='utf8') as f:
-        json.dump(details, f, indent=4, ensure_ascii=False)
 
 
 class TescoScraper:
@@ -112,6 +71,7 @@ class TescoScraper:
         found_items = soup.find(name='div', attrs={'class': 'product-list-container'})
 
         if not found_items:
+            logging.info('No result found.')
             return
 
         if (
@@ -122,7 +82,7 @@ class TescoScraper:
                 )[:16] ==
                 (no_exact_match := 'No exact matches found')
         ):
-            print(f'Warning: {no_exact_match} for your query {self.query}.')
+            logging.warning(f"{no_exact_match} for your query '{self.query}'.")
 
         # second <strong> tag under the div tag with class 'pagination__items-displayed' has text: 'xxx items'
         num_items = soup.find(
@@ -136,7 +96,10 @@ class TescoScraper:
 
         num_pages = ceil(int(num_items)/self.num_items_per_page)
 
-        for page_number in range(1, num_pages + 1):
+        logging.info(f"Found {num_items} items for your query. Fetching {num_pages} {'pages' if num_pages>1 else 'page'}.")
+
+        for page_number in tqdm(range(1, num_pages + 1)):
+            logging.info(f"Fetching page {page_number}...")
             if page_number != 1:
                 soup = self.parse_page(page_number)
             self._items += [
@@ -149,7 +112,7 @@ class TescoScraper:
             ]
 
     @property
-    def items(self):
+    def items(self) -> List[Item]:
         return [item for item in self._items if item is not None]
 
     def _individual_page_links(self) -> List[str]:
@@ -176,6 +139,7 @@ class TescoScraper:
     def get_items_details(self):
         """
         Extract data from the details page:
+            - category
             - name of the product
             - price
             - price per quantity
@@ -183,13 +147,16 @@ class TescoScraper:
         """
         # TODO: consider adding nutrition
         # TODO: consider adding review stats
+
+        logging.info('Fetching data from individual pages.')
+
         individual_page_links = self._individual_page_links()
 
         float_pattern = "\d+\.\d+"
 
         for i, detail_page in enumerate(map(parse_html, individual_page_links)):
 
-            print(f'scraping data from {individual_page_links[i]}')
+            logging.info(f'Scraping data from {individual_page_links[i]}')
 
             try:
                 product_id = individual_page_links[i].split('/')[-1]
@@ -220,10 +187,12 @@ class TescoScraper:
                     attrs={'class': 'price-per-quantity-weight'}
                 )
 
-                price_per_quantity = re.findall(
-                    float_pattern,
-                    price_per_quantity_info
-                )[0]
+                price_per_quantity = float(
+                    re.findall(
+                        float_pattern,
+                        price_per_quantity_info
+                    )[0]
+                )
                 base_quantity = price_per_quantity_info.split('/')[-1]
 
                 image_link = detail_page.find(
@@ -253,23 +222,26 @@ class TescoScraper:
             except AttributeError:
                 self._items[i] = None
 
-    def save_to_files_and_db(self):
+        logging.info('Scraping finished.')
+
+    def save_to_files_and_db(self, output_directory: Path):
         """
         Save items details in JSON and images.
-        Output directory: raw_data/<query>/<item_id>
+        Output directory: raw_data/<category>/<item_id>
         """
-        # TODO: symlinks for existing items
         if not self._items:
             print('No result found.')
             return
-        directory = Path(__file__).parent.parent / 'raw_data'
-        os.makedirs(directory, exist_ok=True)
+
+        os.makedirs(output_directory, exist_ok=True)
+
+        logging.info("Saving to files and to the database (if not existing)")
 
         for item in self.items:
             item_details = item.details
 
             product = Product(**item_details)
-            item_directory = directory / f"{item_details['category']}/{item_details['id']}"
+            item_directory = output_directory / f"{item_details['category']}/{item_details['id']}"
 
             if entry := Product.get_entry_if_exists(
                                 product,
@@ -278,22 +250,19 @@ class TescoScraper:
                 # print('found entry')
                 # print(entry, type(entry))
                 if entry.price != product.price:
-                    save_files(item_details, item_directory)
+                    to_json(item_details, item_directory)
                 else:
                     continue
             else:
-                save_files(item_details, item_directory)
+                to_json(item_details, item_directory)
                 urlretrieve(item_details['image_link'], item_directory / f"image.jpg")
             self.session.add(product)
 
         self.session.commit()
         self.session.close()
-        print('end of call')
 
 
-
-tesco_scraper = TescoScraper('snickers')
-items = tesco_scraper.items
-items_details = [item.details for item in items]
-tesco_scraper.save_to_files_and_db()
-
+# tesco_scraper = TescoScraper('snikers')
+# path = Path(__file__).parent.parent / 'raw_data'
+# items_details = [item.details for item in tesco_scraper.items]
+# tesco_scraper.save_to_files_and_db(path)
