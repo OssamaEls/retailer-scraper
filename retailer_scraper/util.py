@@ -11,9 +11,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import NullPool
 
-from retailer_scraper.db_config import config
-from retailer_scraper.db_model import Base
-from retailer_scraper.headers import headers
+from db_model import Base
+from headers import headers
 
 
 def parse_html(url: str) -> BeautifulSoup:
@@ -67,11 +66,11 @@ def make_session() -> Session:
     -------
     An SQLAlchemy Session
     """
-    db_name = config['db_name']
-    username = config['username']
-    password = config['password']
-    host = config['host']
-    port = config['port']
+    db_name = os.environ['db_name']
+    username = os.environ['username']
+    password = os.environ['password']
+    host = os.environ['host']
+    port = 5432
 
     database_url = f'postgresql://{username}:{password}@{host}:{port}/{db_name}'
     engine = create_engine(database_url, poolclass=NullPool)

@@ -3,9 +3,9 @@ from pathlib import Path
 
 import boto3
 
-from retailer_scraper.tesco import TescoScraper
-from retailer_scraper.s3 import upload_directory
-from retailer_scraper.analysis import print_results
+from tesco import TescoScraper
+from s3 import upload_directory
+from analysis import print_results
 
 
 def main():

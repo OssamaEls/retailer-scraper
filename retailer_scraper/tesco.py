@@ -11,9 +11,9 @@ from tqdm import tqdm
 from urllib.parse import quote
 from urllib.request import urlretrieve
 
-from retailer_scraper.item import Item
-from retailer_scraper.util import get_text, parse_html, make_session, to_json
-from retailer_scraper.db_model import Product
+from item import Item
+from util import get_text, parse_html, make_session, to_json
+from db_model import Product
 
 
 # logger = logging.getLogger(
