@@ -16,12 +16,13 @@ def main():
     path = Path(__file__).parent.parent / 'raw_data'
     tesco_scraper.save_to_files_and_db(path)
 
-    s3_client = boto3.client('s3')
-    upload_directory(path, s3_client, 'retailer-scraper')
-    shutil.rmtree(path)
+    # s3_client = boto3.client('s3')
+    # upload_directory(path, s3_client, 'retailer-scraper')
+    # shutil.rmtree(path)
 
     items_details = [item.details for item in tesco_scraper.items]
-    print_results(items_details)
+    if items_details:
+        print_results(items_details)
 
 
 if __name__ == '__main__':
